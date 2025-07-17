@@ -136,7 +136,6 @@ export function Analytics() {
       {/* KPIs Principales Mejorados */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {analyticsData.kpiData.map((kpi: any, index: number) => {
-          const Icon = kpi.icon;
           return (
             <Card key={index} className="p-6 hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50 border-l-4 border-l-purple-400 hover:scale-105">
               <div className="flex items-center justify-between">
@@ -156,7 +155,7 @@ export function Analytics() {
                   </p>
                 </div>
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-${kpi.color}-100 to-${kpi.color}-200 shadow-lg`}>
-                  <Icon className={`w-8 h-8 text-${kpi.color}-600`} />
+                  <span className="text-2xl">{kpi.emoji}</span>
                 </div>
               </div>
             </Card>
