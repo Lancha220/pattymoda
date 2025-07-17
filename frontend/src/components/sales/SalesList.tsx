@@ -60,7 +60,7 @@ export function SalesList() {
     }
   };
   const filteredSales = sales.filter((sale) => {
-    const customerName = `${sale.cliente?.nombre ?? ""} ${sale.cliente?.apellido ?? ""}`;
+    const customerName = `${sale.cliente?.nombre || ""} ${sale.cliente?.apellido || ""}`;
     const matchesSearch =
       customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.numeroVenta.toLowerCase().includes(searchTerm.toLowerCase());

@@ -98,7 +98,16 @@ export function NewSale() {
   const loadCustomers = async () => {
     try {
       const response = await CustomerService.getAllCustomers();
-      setCustomers(response.data || []);
+      const customersData = response.data || [];
+      // Mapear los datos del backend al formato esperado
+      const mappedCustomers = customersData.map((c: any) => ({
+        id: c.id,
+        nombre: c.nombre,
+        apellido: c.apellido,
+        email: c.email,
+        telefono: c.telefono
+      }));
+      setCustomers(mappedCustomers);
     } catch (error) {
       console.error('Error loading customers:', error);
     }
@@ -375,32 +384,32 @@ export function NewSale() {
                   </div>
                 ) : (
                   <>
-                <Input
-                  placeholder="🔍 Buscar cliente..."
-                  value={customerSearchTerm}
-                  onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                  className="bg-white border-purple-300 focus:ring-purple-500 focus:border-purple-500"
-                />
-                
-                {customerSearchTerm && filteredCustomers.length > 0 && (
-                  <div className="max-h-40 overflow-y-auto bg-white border border-purple-300 rounded-lg">
-                    {filteredCustomers.slice(0, 5).map((customer) => (
-                      <div
-                        key={customer.id}
-                        className="p-2 hover:bg-purple-50 cursor-pointer border-b last:border-b-0"
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setCustomerSearchTerm('');
-                        }}
-                      >
-                        <p className="font-medium text-gray-900">
-                          {customer.nombre} {customer.apellido}
-                        </p>
-                        <p className="text-sm text-gray-500">{customer.email}</p>
+                    <Input
+                      placeholder="🔍 Buscar cliente..."
+                      value={customerSearchTerm}
+                      onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                      className="bg-white border-purple-300 focus:ring-purple-500 focus:border-purple-500"
+                    />
+                    
+                    {customerSearchTerm && filteredCustomers.length > 0 && (
+                      <div className="max-h-40 overflow-y-auto bg-white border border-purple-300 rounded-lg">
+                        {filteredCustomers.slice(0, 5).map((customer) => (
+                          <div
+                            key={customer.id}
+                            className="p-2 hover:bg-purple-50 cursor-pointer border-b last:border-b-0"
+                            onClick={() => {
+                              setSelectedCustomer(customer);
+                              setCustomerSearchTerm('');
+                            }}
+                          >
+                            <p className="font-medium text-gray-900">
+                              {customer.nombre} {customer.apellido}
+                            </p>
+                            <p className="text-sm text-gray-500">{customer.email}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )}
                   </>
                 )}
                 

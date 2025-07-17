@@ -55,7 +55,12 @@ class ApiService {
         throw new Error(errorMessage);
       }
 
-      return data;
+      // Normalizar la respuesta para que siempre tenga la estructura esperada
+      if (typeof data === 'object' && data !== null && 'data' in data) {
+        return data;
+      } else {
+        return { data: data, message: 'Success', status: response.status, timestamp: new Date() };
+      }
     } catch (error) {
       console.error('API Error:', error);
       throw error;

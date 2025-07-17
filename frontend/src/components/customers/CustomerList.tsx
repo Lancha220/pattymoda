@@ -69,7 +69,6 @@ export function CustomerList() {
   const filteredCustomers = customers.filter(
     (customer) => {
       const matchesSearch = `${customer.nombre} ${customer.apellido}`
-      `${customer.nombre} ${customer.apellido}`
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -481,7 +480,6 @@ export function CustomerList() {
           </div>
         </div>
       </Modal>
-    </div>
       {/* Modal de Vista de Cliente */}
       <Modal
         isOpen={isViewModalOpen}
@@ -573,5 +571,6 @@ export function CustomerList() {
           </div>
         )}
       </Modal>
+    </div>
   );
 }

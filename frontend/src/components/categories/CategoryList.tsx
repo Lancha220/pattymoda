@@ -126,7 +126,7 @@ export function CategoryList() {
         }`}
       >
         <div className="flex items-center space-x-3">
-          {category.children && category.children.length > 0 && (
+          {(category as any).children && (category as any).children.length > 0 && (
             <button
               onClick={() => toggleExpanded(category.id)}
               className="p-1 hover:bg-gray-100 rounded"
@@ -182,9 +182,9 @@ export function CategoryList() {
         </div>
       </div>
 
-      {category.children && expandedCategories.has(category.id) && (
+      {(category as any).children && expandedCategories.has(category.id) && (
         <div className="space-y-2">
-          {category.children.map(child => renderCategory(child, level + 1))}
+          {(category as any).children.map((child: any) => renderCategory(child, level + 1))}
         </div>
       )}
     </div>

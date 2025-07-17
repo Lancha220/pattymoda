@@ -35,8 +35,9 @@ export interface Category {
   id: string;
   nombre: string;
   descripcion?: string;
-  parentId?: string;
+  categoriaPadreId?: string;
   activo: boolean;
+  fechaCreacion: string;
 }
 
 export interface Size {

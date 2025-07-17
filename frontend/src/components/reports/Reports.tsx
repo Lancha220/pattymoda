@@ -35,7 +35,7 @@ export function Reports() {
       const totalProducts = dashboardStats.totalProducts || 0;
       const newCustomers = Math.round(dashboardStats.totalCustomers * 0.1); // Estimación de nuevos clientes
       
-      const averageTicket = dashboardStats.monthlySales > 0 
+      const averageTicket = (dashboardStats.monthlySales || 0) > 0 
         ? totalRevenue / dashboardStats.monthlySales
         : 0;
 

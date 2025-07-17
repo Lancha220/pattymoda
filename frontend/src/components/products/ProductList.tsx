@@ -84,21 +84,21 @@ export function ProductList() {
   };
   const filteredProducts = products.filter(
     (product) => {
-    const matchesSearch = product.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = product.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.categoria.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (product.marca && product.marca.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesCategory = filterCategory === "all" || product.categoria.id === filterCategory;
+      const matchesCategory = filterCategory === "all" || product.categoria.id === filterCategory;
     
-    const matchesStatus = filterStatus === "all" || 
+      const matchesStatus = filterStatus === "all" || 
       (filterStatus === "active" && product.activo) ||
       (filterStatus === "inactive" && !product.activo) ||
       (filterStatus === "low_stock" && product.stock <= product.stockMinimo) ||
       (filterStatus === "featured" && product.destacado) ||
       (filterStatus === "on_sale" && product.enOferta);
     
-    return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch && matchesCategory && matchesStatus;
     }
   );
 
@@ -245,19 +245,6 @@ export function ProductList() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Destacados</p>
               <p className="text-2xl font-bold text-gray-900">{featuredProducts.length}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">En Oferta</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {onSaleProducts.length}
-              </p>
             </div>
           </div>
         </Card>
@@ -481,7 +468,6 @@ export function ProductList() {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
-    </div>
       {/* Modal de Vista de Producto */}
       <Modal
         isOpen={isViewModalOpen}
@@ -562,5 +548,6 @@ export function ProductList() {
           </div>
         )}
       </Modal>
+    </div>
   );
 }
