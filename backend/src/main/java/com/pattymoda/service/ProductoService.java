@@ -1,7 +1,19 @@
 package com.pattymoda.service;
 
+import com.pattymoda.dto.request.ProductoCreateDTO;
+import com.pattymoda.dto.request.ProductoUpdateDTO;
+import com.pattymoda.dto.response.ProductoResponseDTO;
+import com.pattymoda.entity.Categoria;
+import com.pattymoda.entity.Marca;
 import com.pattymoda.entity.Producto;
+import com.pattymoda.exception.BusinessException;
+import com.pattymoda.mapper.ProductoMapper;
+import com.pattymoda.repository.CategoriaRepository;
+import com.pattymoda.repository.MarcaRepository;
 import com.pattymoda.repository.ProductoRepository;
+import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,11 +26,22 @@ import java.util.Optional;
 @Transactional
 public class ProductoService extends BaseService<Producto, Long> {
 
-    private final ProductoRepository productoRepository;
+    private static final Logger logger = LoggerFactory.getLogger(ProductoService.class);
 
-    public ProductoService(ProductoRepository productoRepository) {
+    private final ProductoRepository productoRepository;
+    private final CategoriaRepository categoriaRepository;
+    private final MarcaRepository marcaRepository;
+    private final ProductoMapper productoMapper;
+
+    public ProductoService(ProductoRepository productoRepository, 
+                          CategoriaRepository categoriaRepository,
+                          MarcaRepository marcaRepository,
+                          ProductoMapper productoMapper) {
         super(productoRepository);
         this.productoRepository = productoRepository;
+        this.categoriaRepository = categoriaRepository;
+        this.marcaRepository = marcaRepository;
+        this.productoMapper = productoMapper;
     }
 
     public Optional<Producto> findByCodigoProducto(String codigoProducto) {
@@ -85,80 +108,93 @@ public class ProductoService extends BaseService<Producto, Long> {
         return productoRepository.countProductosDestacados();
     }
 
-    public Producto crearProducto(Producto producto) {
+    public ProductoResponseDTO crearProducto(ProductoCreateDTO productoDTO) {
+        logger.info("Creando producto: {}", productoDTO.getNombre());
+        
         // Validar que el código de producto no exista
-        if (producto.getCodigoProducto() != null && existsByCodigoProducto(producto.getCodigoProducto())) {
-            throw new RuntimeException("El código de producto ya está registrado");
+        if (existsByCodigoProducto(productoDTO.getCodigoProducto())) {
+            throw new BusinessException("El código de producto ya está registrado: " + productoDTO.getCodigoProducto());
         }
 
         // Validar que el SKU no exista
-        if (producto.getSku() != null && existsBySku(producto.getSku())) {
-            throw new RuntimeException("El SKU ya está registrado");
+        if (existsBySku(productoDTO.getSku())) {
+            throw new BusinessException("El SKU ya está registrado: " + productoDTO.getSku());
         }
 
         // Validar que el código de barras no exista
-        if (producto.getCodigoBarras() != null && existsByCodigoBarras(producto.getCodigoBarras())) {
-            throw new RuntimeException("El código de barras ya está registrado");
+        if (productoDTO.getCodigoBarras() != null && existsByCodigoBarras(productoDTO.getCodigoBarras())) {
+            throw new BusinessException("El código de barras ya está registrado: " + productoDTO.getCodigoBarras());
         }
 
-        return save(producto);
+        // Convertir DTO a entidad
+        Producto producto = productoMapper.toEntity(productoDTO);
+        
+        // Establecer relaciones
+        Categoria categoria = categoriaRepository.findById(productoDTO.getCategoriaId())
+                .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada con ID: " + productoDTO.getCategoriaId()));
+        producto.setCategoria(categoria);
+        
+        if (productoDTO.getMarcaId() != null) {
+            Marca marca = marcaRepository.findById(productoDTO.getMarcaId())
+                    .orElseThrow(() -> new EntityNotFoundException("Marca no encontrada con ID: " + productoDTO.getMarcaId()));
+            producto.setMarca(marca);
+        }
+        
+        Producto productoGuardado = save(producto);
+        logger.info("Producto creado exitosamente con ID: {}", productoGuardado.getId());
+        
+        return productoMapper.toResponseDTO(productoGuardado);
     }
 
-    public Producto actualizarProducto(Long id, Producto productoActualizado) {
+    public ProductoResponseDTO actualizarProducto(Long id, ProductoUpdateDTO productoDTO) {
+        logger.info("Actualizando producto ID: {}", id);
+        
         Producto productoExistente = findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-        // Validar que el código de producto no esté en uso por otro producto
-        if (!productoExistente.getCodigoProducto().equals(productoActualizado.getCodigoProducto()) &&
-                existsByCodigoProducto(productoActualizado.getCodigoProducto())) {
-            throw new RuntimeException("El código de producto ya está registrado");
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
+
+        // Actualizar campos usando el mapper
+        productoMapper.updateEntity(productoExistente, productoDTO);
+        
+        // Establecer relaciones
+        Categoria categoria = categoriaRepository.findById(productoDTO.getCategoriaId())
+                .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada con ID: " + productoDTO.getCategoriaId()));
+        productoExistente.setCategoria(categoria);
+        
+        if (productoDTO.getMarcaId() != null) {
+            Marca marca = marcaRepository.findById(productoDTO.getMarcaId())
+                    .orElseThrow(() -> new EntityNotFoundException("Marca no encontrada con ID: " + productoDTO.getMarcaId()));
+            productoExistente.setMarca(marca);
+        } else {
+            productoExistente.setMarca(null);
         }
-
-        // Validar que el SKU no esté en uso por otro producto
-        if (!productoExistente.getSku().equals(productoActualizado.getSku()) &&
-                existsBySku(productoActualizado.getSku())) {
-            throw new RuntimeException("El SKU ya está registrado");
-        }
-
-        // Actualizar campos
-        productoExistente.setNombre(productoActualizado.getNombre());
-        productoExistente.setDescripcion(productoActualizado.getDescripcion());
-        productoExistente.setDescripcionCorta(productoActualizado.getDescripcionCorta());
-        productoExistente.setCategoria(productoActualizado.getCategoria());
-        productoExistente.setMarca(productoActualizado.getMarca());
-        productoExistente.setModelo(productoActualizado.getModelo());
-        productoExistente.setPeso(productoActualizado.getPeso());
-        productoExistente.setDimensiones(productoActualizado.getDimensiones());
-        productoExistente.setImagenPrincipal(productoActualizado.getImagenPrincipal());
-        productoExistente.setRequiereTalla(productoActualizado.getRequiereTalla());
-        productoExistente.setRequiereColor(productoActualizado.getRequiereColor());
-        productoExistente.setEsPerecedero(productoActualizado.getEsPerecedero());
-        productoExistente.setTiempoEntregaDias(productoActualizado.getTiempoEntregaDias());
-        productoExistente.setGarantiaMeses(productoActualizado.getGarantiaMeses());
-        productoExistente.setDestacado(productoActualizado.getDestacado());
-        productoExistente.setNuevo(productoActualizado.getNuevo());
-        productoExistente.setActivo(productoActualizado.getActivo());
-
-        return save(productoExistente);
+        
+        Producto productoActualizado = save(productoExistente);
+        logger.info("Producto actualizado exitosamente ID: {}", id);
+        
+        return productoMapper.toResponseDTO(productoActualizado);
     }
 
     public void cambiarEstado(Long id, Boolean activo) {
+        logger.info("Cambiando estado del producto ID: {} a {}", id, activo);
         Producto producto = findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
         producto.setActivo(activo);
         save(producto);
     }
 
     public void cambiarDestacado(Long id, Boolean destacado) {
+        logger.info("Cambiando destacado del producto ID: {} a {}", id, destacado);
         Producto producto = findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
         producto.setDestacado(destacado);
         save(producto);
     }
 
     public void cambiarNuevo(Long id, Boolean nuevo) {
+        logger.info("Cambiando nuevo del producto ID: {} a {}", id, nuevo);
         Producto producto = findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
         producto.setNuevo(nuevo);
         save(producto);
     }

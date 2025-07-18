@@ -1,12 +1,22 @@
 package com.pattymoda.controller;
 
+import com.pattymoda.dto.request.ProductoCreateDTO;
+import com.pattymoda.dto.request.ProductoUpdateDTO;
+import com.pattymoda.dto.response.ProductoResponseDTO;
 import com.pattymoda.entity.Producto;
+import com.pattymoda.mapper.ProductoMapper;
 import com.pattymoda.service.ProductoService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,37 +25,72 @@ import java.util.List;
 @RequestMapping("/productos")
 @Tag(name = "Productos", description = "API para gestión de productos")
 @CrossOrigin(origins = "*")
+@Validated
 public class ProductoController extends BaseController<Producto, Long> {
 
-    private final ProductoService productoService;
+    private static final Logger logger = LoggerFactory.getLogger(ProductoController.class);
 
-    public ProductoController(ProductoService productoService) {
+    private final ProductoService productoService;
+    private final ProductoMapper productoMapper;
+
+    public ProductoController(ProductoService productoService, ProductoMapper productoMapper) {
         super(productoService);
         this.productoService = productoService;
+        this.productoMapper = productoMapper;
     }
 
-    @Operation(summary = "Obtener todos los productos")
+    @Operation(summary = "Obtener todos los productos", description = "Retorna una lista de todos los productos del sistema")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Lista de productos obtenida exitosamente"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
     @GetMapping
-    public ResponseEntity<List<Producto>> getAllProductos() {
-        return super.findAll();
+    public ResponseEntity<List<ProductoResponseDTO>> getAllProductos() {
+        logger.info("Obteniendo todos los productos");
+        List<Producto> productos = productoService.findAll();
+        List<ProductoResponseDTO> productosDTO = productos.stream()
+                .map(productoMapper::toResponseDTO)
+                .toList();
+        return ResponseEntity.ok(productosDTO);
     }
 
-    @Operation(summary = "Obtener productos paginados")
+    @Operation(summary = "Obtener productos paginados", description = "Retorna una página de productos con paginación")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Página de productos obtenida exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Parámetros de paginación inválidos")
+    })
     @GetMapping("/page")
-    public ResponseEntity<Page<Producto>> getProductosPaginados(Pageable pageable) {
-        return super.findAll(pageable);
+    public ResponseEntity<Page<ProductoResponseDTO>> getProductosPaginados(Pageable pageable) {
+        logger.info("Obteniendo productos paginados - Página: {}, Tamaño: {}", pageable.getPageNumber(), pageable.getPageSize());
+        Page<Producto> productos = productoService.findAll(pageable);
+        Page<ProductoResponseDTO> productosDTO = productos.map(productoMapper::toResponseDTO);
+        return ResponseEntity.ok(productosDTO);
     }
 
-    @Operation(summary = "Obtener producto por ID")
+    @Operation(summary = "Obtener producto por ID", description = "Retorna un producto específico por su ID")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Producto encontrado"),
+        @ApiResponse(responseCode = "404", description = "Producto no encontrado")
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<Producto> getProductoById(@PathVariable Long id) {
-        return super.findById(id);
+    public ResponseEntity<ProductoResponseDTO> getProductoById(@PathVariable Long id) {
+        logger.info("Obteniendo producto por ID: {}", id);
+        return productoService.findById(id)
+                .map(productoMapper::toResponseDTO)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Buscar producto por código")
+    @Operation(summary = "Buscar producto por código", description = "Busca un producto por su código único")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Producto encontrado"),
+        @ApiResponse(responseCode = "404", description = "Producto no encontrado")
+    })
     @GetMapping("/codigo/{codigoProducto}")
-    public ResponseEntity<Producto> getProductoByCodigo(@PathVariable String codigoProducto) {
+    public ResponseEntity<ProductoResponseDTO> getProductoByCodigo(@PathVariable String codigoProducto) {
+        logger.info("Buscando producto por código: {}", codigoProducto);
         return productoService.findByCodigoProducto(codigoProducto)
+                .map(productoMapper::toResponseDTO)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -134,26 +179,30 @@ public class ProductoController extends BaseController<Producto, Long> {
         return ResponseEntity.ok(productos);
     }
 
-    @Operation(summary = "Crear nuevo producto")
+    @Operation(summary = "Crear nuevo producto", description = "Crea un nuevo producto en el sistema")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Producto creado exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
+        @ApiResponse(responseCode = "409", description = "Conflicto - Código o SKU ya existe")
+    })
     @PostMapping
-    public ResponseEntity<Producto> createProducto(@RequestBody Producto producto) {
-        try {
-            Producto nuevoProducto = productoService.crearProducto(producto);
-            return ResponseEntity.status(201).body(nuevoProducto);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<ProductoResponseDTO> createProducto(@Valid @RequestBody ProductoCreateDTO productoDTO) {
+        logger.info("Creando nuevo producto: {}", productoDTO.getNombre());
+        ProductoResponseDTO nuevoProducto = productoService.crearProducto(productoDTO);
+        return ResponseEntity.status(201).body(nuevoProducto);
     }
 
-    @Operation(summary = "Actualizar producto")
+    @Operation(summary = "Actualizar producto", description = "Actualiza un producto existente")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Producto actualizado exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
+        @ApiResponse(responseCode = "404", description = "Producto no encontrado")
+    })
     @PutMapping("/{id}")
-    public ResponseEntity<Producto> updateProducto(@PathVariable Long id, @RequestBody Producto producto) {
-        try {
-            Producto productoActualizado = productoService.actualizarProducto(id, producto);
-            return ResponseEntity.ok(productoActualizado);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<ProductoResponseDTO> updateProducto(@PathVariable Long id, @Valid @RequestBody ProductoUpdateDTO productoDTO) {
+        logger.info("Actualizando producto ID: {}", id);
+        ProductoResponseDTO productoActualizado = productoService.actualizarProducto(id, productoDTO);
+        return ResponseEntity.ok(productoActualizado);
     }
 
     @Operation(summary = "Cambiar estado de producto")

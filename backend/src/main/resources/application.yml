@@ -71,15 +71,19 @@ server:
 # Logging Configuration
 logging:
   level:
-    com.pattymoda: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.pattymoda: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.web: INFO
+    org.springframework.cache: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: logs/pattymoda-backend.log
+    max-size: 10MB
+    max-history: 30
 
 # JWT Configuration
 jwt:
@@ -131,17 +135,30 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,loggers,caches
   endpoint:
     health:
       show-details: when-authorized
+      show-components: always
+    info:
+      enabled: true
   metrics:
     export:
       prometheus:
         enabled: true
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
 
 # Custom Application Properties
 app:
+  name: "PattyModa Backend API"
+  version: "1.0.0"
+  description: "Sistema de gestión completo para tienda de ropa"
   pagination:
     default-page-size: 20
     max-page-size: 100
@@ -152,6 +169,11 @@ app:
       require-lowercase: true
       require-numbers: true
       require-special-chars: true
+    jwt:
+      cleanup-interval: 3600000 # 1 hour
+  cache:
+    ttl: 300 # 5 minutes
+    max-entries: 1000
   business:
     company:
       name: "DPattyModa"
@@ -163,3 +185,72 @@ app:
       code: "PEN"
       symbol: "S/"
     timezone: "America/Lima" 
+  features:
+    audit:
+      enabled: true
+    cache:
+      enabled: true
+    metrics:
+      enabled: true
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+logging:
+  level:
+    com.pattymoda: DEBUG
+    org.hibernate.SQL: DEBUG
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    show-sql: false
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+logging:
+  level:
+    com.pattymoda: WARN
+    org.springframework: WARN
+    org.hibernate: WARN
+  file:
+    name: /var/log/pattymoda/backend.log
+
+---
+# Test Profile
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: true
+logging:
+  level:
+    com.pattymoda: DEBUG
+    org.springframework.test: DEBUG
